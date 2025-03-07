@@ -62,6 +62,17 @@ pipeline {
 
         }
 
+        stage('Manual Approval') {
+            steps {
+                script {
+                    def userInput = input(
+                        message: 'Lanjutkan ke tahap Deploy?',
+                        ok: 'Lanjutkan',
+                        parameters: []
+                    )
+                }
+            }
+        }
         stage('Deploy') { 
 
             agent any

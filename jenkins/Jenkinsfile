@@ -67,7 +67,7 @@ pipeline {
                 script {
                     def userInput = input(
                         message: 'Lanjutkan ke tahap Deploy?',
-                        ok: 'Lanjutkan',
+                        ok: 'Proceed',
                         parameters: []
                     )
                 }

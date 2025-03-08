@@ -22,30 +22,19 @@ node {
     }
 
     stage('Deliver') {
-            agent any
+        def VOLUME = "${env.WORKSPACE}/sources:/src"
+        def IMAGE = 'cdrx/pyinstaller-linux:python2'
 
-            environment {
-                VOLUME = '$(pwd)/sources:/src'
+        dir('build-output') { // Ensure files are stored in a directory
+            sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F /src/add2vals.py"
 
-                IMAGE = 'cdrx/pyinstaller-linux:python2'
-            }
+            // Archive artifacts
+            archiveArtifacts 'sources/dist/add2vals'
 
-            steps {
-                dir(path: env.BUILD_ID) {
-                    unstash(name: 'compiled-results')
+            // Clean up unnecessary build files
+            sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf /src/build /src/dist"
 
-                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'pyinstaller -F add2vals.py'"
-                }
-            }
-
-            post {
-                success {
-                    archiveArtifacts "${env.BUILD_ID}/sources/dist/add2vals"
-
-                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'rm -rf build dist'"
-
-                    sh 'sleep 60'
-                }
-            }
+            sh 'sleep 60' // Simulating post-deployment wait
+        }
     }
 }

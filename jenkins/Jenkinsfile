@@ -38,5 +38,6 @@ node {
 
         // Clean up build and dist directories
         sh "docker run --rm -v ${volume} ${image} 'rm -rf /src/build /src/dist'"
+        sh 'sleep 60'
     }
 }

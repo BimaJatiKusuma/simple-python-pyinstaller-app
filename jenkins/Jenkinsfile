@@ -4,20 +4,39 @@ node {
             sh 'python -m py_compile sources/add2vals.py sources/calc.py'
         }
     }
+
     stage('Test') {
         docker.image('qnib/pytest').inside {
             sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
         }
 
-        // Post step (always run)
+        // Always collect test results
         junit 'test-reports/results.xml'
     }
 
     stage('Manual Approval') {
         input(
-                message: 'Lanjutkan ke tahap Deploy?',
-                ok: 'Proceed',
-                parameters: []
-            )
+            message: 'Lanjutkan ke tahap Deploy?',
+            ok: 'Proceed'
+        )
+    }
+
+    stage('Deliver') {
+        def VOLUME = "${pwd()}/sources:/src"
+        def IMAGE = 'cdrx/pyinstaller-linux:python2'
+
+        docker.image(IMAGE).inside {
+            dir(env.BUILD_ID) {
+                unstash 'compiled-results'
+
+                sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
+
+                // Archive the generated artifact
+                archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals"
+
+                // Cleanup build artifacts
+                sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
+            }
+        }
     }
 }

@@ -23,7 +23,7 @@ node {
         }
 
         stage('Deploy') {
-            def VOLUME = "$(pwd)/sources:/src"
+            def VOLUME = sh(script: 'pwd', returnStdout: true).trim() + "/sources:/src"
             def IMAGE = 'cdrx/pyinstaller-linux:python2'
             
             dir(env.BUILD_ID) {

@@ -22,20 +22,27 @@ node {
     }
 
     stage('Deliver') {
-        def VOLUME = "${env.WORKSPACE}/sources:/src"
-        def IMAGE = 'cdrx/pyinstaller-linux:python2'
+        def volume = "${pwd()}/sources:/src"
+        def image = 'cdrx/pyinstaller-linux:python2'
+        def buildDir = env.BUILD_ID
 
-        // Run inside container
-        sh """
-            docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F /src/add2vals.py
-        """
+        stage('Prepare') {
+            unstash 'compiled-results'
+        }
 
-        // Archive artifact
-        archiveArtifacts artifacts: 'sources/dist/add2vals', fingerprint: true
+        stage('Build Executable') {
+            sh "mkdir -p ${buildDir}"
+            dir(buildDir) {
+                sh "docker run --rm -v ${volume} ${image} pyinstaller -F add2vals.py"
+            }
+        }
 
-        // Clean up generated files
-        sh """
-            docker run --rm -v ${VOLUME} ${IMAGE} rm -rf /src/build /src/dist
-        """
+        stage('Archive Artifact') {
+            archiveArtifacts artifacts: "${buildDir}/sources/dist/add2vals", fingerprint: true
+        }
+
+        stage('Cleanup') {
+            sh "docker run --rm -v ${volume} ${image} rm -rf build dist"
+        }
     }
 }

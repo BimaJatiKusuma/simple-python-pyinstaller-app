@@ -26,25 +26,25 @@ node {
     stage('Deliver') {
         def volume = "${pwd()}/sources:/src"
         def image = 'cdrx/pyinstaller-linux:python2'
-        def buildDir = env.BUILD_ID
+        def buildDir = "${pwd()}/${env.BUILD_ID}"
 
         stage('Prepare') {
             unstash 'compiled-results'
+            sh "mkdir -p ${buildDir}"
         }
 
         stage('Build Executable') {
-            sh "mkdir -p ${buildDir}"
             dir(buildDir) {
-                sh "docker run --rm -v ${volume} ${image} pyinstaller -F add2vals.py"
+                sh "docker run --rm -v ${volume} ${image} sh -c 'cd /src && pyinstaller -F add2vals.py'"
             }
         }
 
         stage('Archive Artifact') {
-            archiveArtifacts artifacts: "${buildDir}/sources/dist/add2vals", fingerprint: true
+            archiveArtifacts artifacts: 'sources/dist/add2vals', fingerprint: true
         }
 
         stage('Cleanup') {
-            sh "docker run --rm -v ${volume} ${image} rm -rf build dist"
+            sh "docker run --rm -v ${volume} ${image} sh -c 'cd /src && rm -rf build dist'"
         }
     }
 }

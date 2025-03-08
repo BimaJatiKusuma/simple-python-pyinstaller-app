@@ -23,7 +23,7 @@ node {
         )
     }
 
-    stage('Deliver') {
+    stage('Deploy') {
         def volume = "${env.WORKSPACE}/sources:/src"
         def image = 'cdrx/pyinstaller-linux:python2'
 

@@ -2,44 +2,50 @@ node {
     stage('Build') {
         docker.image('python:2-alpine').inside {
             sh 'python -m py_compile sources/add2vals.py sources/calc.py'
-
-            // Stash compiled sources
-            stash includes: 'sources/**', name: 'compiled-results'
         }
     }
-
     stage('Test') {
         docker.image('qnib/pytest').inside {
             sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
         }
 
-        // Always collect test results
+        // Post step (always run)
         junit 'test-reports/results.xml'
     }
 
     stage('Manual Approval') {
         input(
-            message: 'Lanjutkan ke tahap Deploy?',
-            ok: 'Proceed'
-        )
+                message: 'Lanjutkan ke tahap Deploy?',
+                ok: 'Proceed',
+                parameters: []
+            )
     }
 
     stage('Deliver') {
-        def VOLUME = "${pwd()}/sources:/src"
-        def IMAGE = 'cdrx/pyinstaller-linux:python2'
+            agent any
 
-        docker.image(IMAGE).inside('-u root --entrypoint=""') {
-            dir(env.BUILD_ID) {
-                unstash 'compiled-results'
+            environment {
+                VOLUME = '$(pwd)/sources:/src'
 
-                sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
-
-                // Archive the generated artifact
-                archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals"
-
-                // Cleanup build artifacts
-                sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
+                IMAGE = 'cdrx/pyinstaller-linux:python2'
             }
-        }
+
+            steps {
+                dir(path: env.BUILD_ID) {
+                    unstash(name: 'compiled-results')
+
+                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'pyinstaller -F add2vals.py'"
+                }
+            }
+
+            post {
+                success {
+                    archiveArtifacts "${env.BUILD_ID}/sources/dist/add2vals"
+
+                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'rm -rf build dist'"
+
+                    sh 'sleep 60'
+                }
+            }
     }
 }
